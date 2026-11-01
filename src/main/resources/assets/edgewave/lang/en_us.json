@@ -1,3 +1,16 @@
 {
-  "item.edgewave.edge_sword": "Edgewave Sword"
+  "item.edgewave.edge_sword": "Edgewave Sword",
+  "key.categories.edgewave": "Edgewave",
+  "skill.edgewave.0": "Cyclone",
+  "key.edgewave.skill1": "Skill 1 (Cyclone)",
+  "skill.edgewave.1": "Cross Cut",
+  "key.edgewave.skill2": "Skill 2 (Cross Cut)",
+  "skill.edgewave.2": "Dash",
+  "key.edgewave.skill3": "Skill 3 (Dash)",
+  "skill.edgewave.3": "Blade Rain",
+  "key.edgewave.skill4": "Skill 4 (Blade Rain)",
+  "skill.edgewave.4": "Spiral Lance",
+  "key.edgewave.skill5": "Skill 5 (Spiral Lance)",
+  "skill.edgewave.5": "Orbiting Blades",
+  "key.edgewave.skill6": "Skill 6 (Orbiting Blades)"
 }

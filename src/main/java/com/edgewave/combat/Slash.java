@@ -35,20 +35,20 @@ public final class Slash {
 
     private static final Map<UUID, St> STATES = new HashMap<>();
 
-    private static Vec3d rightOf(Vec3d look) {
+    static Vec3d rightOf(Vec3d look) {
         Vec3d r = look.crossProduct(new Vec3d(0, 1, 0));
         return r.lengthSquared() < 1e-4 ? new Vec3d(1, 0, 0) : r.normalize();
     }
 
-    private static List<LivingEntity> targets(ServerWorld w, Box box, ServerPlayerEntity owner) {
+    static List<LivingEntity> targets(ServerWorld w, Box box, ServerPlayerEntity owner) {
         return w.getEntitiesByClass(LivingEntity.class, box, e -> e != owner && e.isAlive() && !e.isSpectator() && !e.isTeammate(owner));
     }
 
-    private static void hurt(ServerWorld w, LivingEntity t, ServerPlayerEntity p, float amount) {
+    static void hurt(ServerWorld w, LivingEntity t, ServerPlayerEntity p, float amount) {
         t.damage(w.getDamageSources().playerAttack(p), amount);
     }
 
-    private static void impact(ServerWorld w, Vec3d at, int n) {
+    static void impact(ServerWorld w, Vec3d at, int n) {
         Fx.burst(w, "e_spark", at, n, 0.3, 0.3);
         Fx.burst(w, "e_glow", at, Math.max(2, n / 4), 0.15, 0.2);
         Fx.vel(w, "e_core", at, Vec3d.ZERO);
@@ -90,7 +90,17 @@ public final class Slash {
             e.velocityModified = true;
             impact(w, e.getPos().add(0, e.getHeight() / 2, 0), 10);
         }
-        wave(p, step, fin);
+        double roll = switch (step) {
+            case 0 -> Math.toRadians(30);
+            case 1 -> Math.toRadians(-30);
+            case 2 -> Math.toRadians(90);
+            default -> 0.0;
+        };
+        if (fin) {
+            for (int k = -1; k <= 1; k++) wave(p, look.rotateY((float) Math.toRadians(k * 16.0)), 0.0, 3.8, 8f, 16, 2);
+        } else {
+            wave(p, look, roll, 2.6, 6f, 12, 3);
+        }
     }
 
     // ------------------------------------------------------------------ the arc drawn in front of the player
@@ -127,46 +137,58 @@ public final class Slash {
         });
     }
 
-    // ------------------------------------------------------------------ the crescent that flies away
-    private static void wave(ServerPlayerEntity p, int step, boolean fin) {
+    /** A thin line of cubes between two points. */
+    static void line(ServerWorld w, String type, Vec3d a, Vec3d b, double step, Vec3d vel) {
+        Vec3d d = b.subtract(a);
+        double len = d.length();
+        if (len < 0.01) return;
+        Vec3d u = d.multiply(1.0 / len);
+        for (double t = 0; t <= len; t += step) Fx.vel(w, type, a.add(u.multiply(t)), vel);
+    }
+
+    // ------------------------------------------------------------------ the cutting line that flies away
+    /**
+     * A long thin line, very slightly bent, with shorter lines trailing behind it (like an anime cut).
+     * roll: tilt of the line (0 flat, 90 degrees upright). It flies straight and cuts what crosses it.
+     */
+    static void wave(ServerPlayerEntity p, Vec3d dir, double roll, double half, float dmg, int life, int streaks) {
         ServerWorld w = (ServerWorld) p.getWorld();
-        float dmg = fin ? 13f : 6f;
-        double half = fin ? 3.4 : 2.0;
-        Vec3d dir = p.getRotationVec(1f);
         Vec3d right = rightOf(dir);
         Vec3d up = right.crossProduct(dir);
-        // tilt of the crescent follows the slash: diagonal, opposite diagonal, vertical, flat
-        double roll = switch (step) {
-            case 0 -> Math.toRadians(35);
-            case 1 -> Math.toRadians(-35);
-            case 2 -> Math.toRadians(90);
-            default -> 0.0;
-        };
-        Vec3d axis = right.multiply(Math.cos(roll)).add(up.multiply(Math.sin(roll)));
-        Vec3d perp = up.multiply(Math.cos(roll)).subtract(right.multiply(Math.sin(roll)));
+        Vec3d axis = right.multiply(Math.cos(roll)).add(up.multiply(Math.sin(roll))).normalize();
+        Vec3d third = axis.crossProduct(dir).normalize();
         Vec3d[] pos = {p.getEyePos().add(dir.multiply(1.0)).add(0, -0.3, 0)};
         Set<Integer> hit = new HashSet<>();
-        int life = fin ? 16 : 12;
         Effects.add(t -> {
             if (t > life || !p.isAlive()) return false;
-            Vec3d old = pos[0], next = old.add(dir.multiply(1.5));
+            Vec3d old = pos[0], next = old.add(dir.multiply(1.7));
             BlockHitResult bh = w.raycast(new RaycastContext(old, next, RaycastContext.ShapeType.COLLIDER,
                     RaycastContext.FluidHandling.NONE, p));
             if (bh.getType() != HitResult.Type.MISS) {
-                impact(w, bh.getPos(), fin ? 40 : 18);
+                impact(w, bh.getPos(), 22);
                 return false;
             }
             pos[0] = next;
-            for (int i = 0; i <= 28; i++) {
-                double a = Math.toRadians(-80 + 160 * i / 28.0);
-                Vec3d off = axis.multiply(Math.sin(a) * half).add(perp.multiply((Math.cos(a) - 0.6) * half * 0.8));
-                Fx.vel(w, "e_arc", next.add(off), dir.multiply(0.15));
-                if (i % 4 == 0) Fx.vel(w, "e_core", next.add(off), Vec3d.ZERO);
+            for (int sIdx = 0; sIdx < streaks; sIdx++) {
+                double h = half * (1.0 - 0.28 * sIdx);
+                Vec3d c = next.subtract(dir.multiply(0.9 * sIdx));
+                int n = (int) Math.max(6, h * 2 / 0.3);
+                for (int i = 0; i <= n; i++) {
+                    double u = -1.0 + 2.0 * i / n;
+                    if (Math.abs(u) > 0.85 && i % 2 == 0) continue;           // thin pointed tips
+                    Vec3d at = c.add(axis.multiply(u * h)).subtract(dir.multiply(0.18 * h * u * u));
+                    Fx.vel(w, "e_arc", at, dir.multiply(0.12));
+                    if (sIdx == 0 && Math.abs(u) < 0.35 && i % 3 == 0) Fx.vel(w, "e_core", at, Vec3d.ZERO);
+                }
             }
             for (LivingEntity e : targets(w, new Box(next, next).expand(half + 1.0), p)) {
-                if (!hit.add(e.getId())) continue;
+                if (hit.contains(e.getId())) continue;
+                Vec3d rel = e.getPos().add(0, e.getHeight() / 2, 0).subtract(next);
+                if (Math.abs(rel.dotProduct(axis)) > half + 0.4 || Math.abs(rel.dotProduct(dir)) > 1.4
+                        || Math.abs(rel.dotProduct(third)) > 1.1 + e.getHeight() * 0.25) continue;
+                hit.add(e.getId());
                 hurt(w, e, p, dmg);
-                e.addVelocity(dir.x * 0.7, 0.3, dir.z * 0.7);
+                e.addVelocity(dir.x * 0.6, 0.25, dir.z * 0.6);
                 e.velocityModified = true;
                 impact(w, e.getPos().add(0, 1, 0), 16);
             }

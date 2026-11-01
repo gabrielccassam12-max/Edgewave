@@ -1,3 +1,16 @@
 {
-  "item.edgewave.edge_sword": "Espada Edgewave"
+  "item.edgewave.edge_sword": "Espada Edgewave",
+  "key.categories.edgewave": "Edgewave",
+  "skill.edgewave.0": "Ciclone",
+  "key.edgewave.skill1": "Habilidade 1 (Ciclone)",
+  "skill.edgewave.1": "Corte em X",
+  "key.edgewave.skill2": "Habilidade 2 (Corte em X)",
+  "skill.edgewave.2": "Investida",
+  "key.edgewave.skill3": "Habilidade 3 (Investida)",
+  "skill.edgewave.3": "Chuva de Lâminas",
+  "key.edgewave.skill4": "Habilidade 4 (Chuva de Lâminas)",
+  "skill.edgewave.4": "Lança Espiral",
+  "key.edgewave.skill5": "Habilidade 5 (Lança Espiral)",
+  "skill.edgewave.5": "Lâminas Orbitais",
+  "key.edgewave.skill6": "Habilidade 6 (Lâminas Orbitais)"
 }
