@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "edgewave",
+  "version": "0.1.0",
+  "name": "Edgewave",
+  "description": "Uma espada que solta cortes e ondas de corte com cubos brilhantes.",
+  "authors": [
+    "Gabriel"
+  ],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.edgewave.Edgewave"
+    ],
+    "client": [
+      "com.edgewave.client.EdgeClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
